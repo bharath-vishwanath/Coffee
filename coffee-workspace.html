@@ -1,0 +1,911 @@
+<meta charset="utf-8">
+<title>Coffee Business Workspace</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: workspace shell. Header + KPI strip on top, sticky tab bar, then card grids / lists per tab. Edits happen in a modal form. */
+:root {
+  --bg: #f2f4f1;
+  --surface: #ffffff;
+  --surface2: #e8ece9;
+  --ink: #18201d;
+  --muted: #5b6862;
+  --line: #d5dcd7;
+  --accent: #1c5b4a;
+  --accent-ink: #ffffff;
+  --accent-soft: #dbeae4;
+  --danger: #b3261e;
+  --danger-soft: #fbe3e0;
+  --warn: #7d5200;
+  --warn-soft: #faedcb;
+  --ok: #22663b;
+  --ok-soft: #dcefe2;
+  --roast-a: #d8b17d;
+  --roast-b: #5a3420;
+  --f-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --f-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101514; --surface: #182019; --surface2: #222b28; --ink: #e8eeea; --muted: #9aa8a1; --line: #2b3632;
+    --accent: #6cc4a4; --accent-ink: #0b1512; --accent-soft: #1e3a31;
+    --danger: #ff9188; --danger-soft: #3b1f1d; --warn: #f0c36a; --warn-soft: #3a2f14; --ok: #85d69e; --ok-soft: #1b3325;
+    --roast-a: #d8b17d; --roast-b: #9a6a45;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101514; --surface: #182019; --surface2: #222b28; --ink: #e8eeea; --muted: #9aa8a1; --line: #2b3632;
+  --accent: #6cc4a4; --accent-ink: #0b1512; --accent-soft: #1e3a31;
+  --danger: #ff9188; --danger-soft: #3b1f1d; --warn: #f0c36a; --warn-soft: #3a2f14; --ok: #85d69e; --ok-soft: #1b3325;
+  --roast-a: #d8b17d; --roast-b: #9a6a45;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1.02rem; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+.top .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.85rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 12px; cursor: pointer; min-height: 36px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.sm { padding: 3px 9px; min-height: 28px; font-size: 0.82rem; }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn.danger.armed { background: var(--danger); color: var(--surface); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.linkish { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; font-weight: 600; }
+.linkish:hover { color: var(--accent); text-decoration: underline; }
+
+.store { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 0.84rem; }
+.store.warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.store i { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); margin-top: 6px; flex: none; }
+.store.warn i { background: var(--warn); }
+
+#overview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.stat { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; min-width: 0; }
+.stat:hover { border-color: var(--accent); }
+.stat .k { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.stat .v { display: block; font-family: var(--f-display); font-size: 1.6rem; font-weight: 700; line-height: 1.2; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.stat .v.txt { font-size: 1rem; padding-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .s { display: block; font-size: 0.76rem; color: var(--muted); }
+.stat.bad .v { color: var(--danger); }
+
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.tablist { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.tab { flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.tab .n { font-family: var(--f-mono); font-size: 0.75rem; margin-left: 4px; color: var(--muted); }
+
+.bar-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.bar-row .grow { flex: 1 1 auto; }
+select { appearance: none; -webkit-appearance: none; padding-right: 32px !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+.bar-row select, .bar-row input[type=search] { border: 1px solid var(--line); background-color: var(--surface); border-radius: 6px; padding: 6px 8px; min-height: 36px; }
+.bar-row input[type=search] { flex: 1 1 200px; min-width: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.card .row { display: flex; gap: 8px; justify-content: space-between; align-items: flex-start; }
+.card p { margin: 0; overflow-wrap: anywhere; }
+.card.dim { opacity: 0.6; }
+.grp { margin-bottom: 22px; }
+.grp > h2 { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.grp > h2 .n { font-family: var(--f-mono); font-size: 0.8rem; color: var(--muted); font-weight: 400; }
+.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 18px; color: var(--muted); text-align: center; }
+
+.pill { display: inline-block; font-size: 0.72rem; line-height: 1; padding: 4px 8px; border-radius: 999px; background: var(--surface2); color: var(--ink); white-space: nowrap; font-weight: 500; }
+.pill.active, .pill.doing, .pill.medium { background: var(--accent-soft); color: var(--accent); }
+.pill.done, .pill.high-conf { background: var(--ok-soft); color: var(--ok); }
+.pill.dropped, .pill.low { color: var(--muted); }
+.pill.high, .pill.overdue { background: var(--danger-soft); color: var(--danger); }
+.pill.med, .pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+.progress { display: flex; align-items: center; gap: 10px; }
+.bar { flex: 1; height: 10px; border-radius: 5px; background: var(--surface2); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--roast-a), var(--roast-b)); }
+.progress b { font-family: var(--f-mono); font-size: 0.8rem; min-width: 3.2ch; text-align: right; font-weight: 500; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.82rem; color: var(--muted); }
+.card-foot { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 4px; }
+
+ul.plain { list-style: none; margin: 0; padding: 0; }
+.trow { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; }
+.trow.overdue { background: var(--danger-soft); border-color: var(--danger); }
+.trow.done .tmain .linkish { text-decoration: line-through; color: var(--muted); }
+.tmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tmain .linkish { overflow-wrap: anywhere; }
+.tside { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 0.8rem; }
+.chk { flex: none; width: 24px; height: 24px; border: 2px solid var(--muted); border-radius: 6px; background: var(--surface); cursor: pointer; color: var(--accent-ink); font-weight: 700; line-height: 1; padding: 0; }
+.chk[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+.due { font-family: var(--f-mono); }
+.due.od { color: var(--danger); font-weight: 500; }
+
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; align-items: start; }
+.col { background: var(--surface2); border-radius: 8px; padding: 10px; min-width: 0; }
+.col > h2 { font-size: 0.95rem; margin-bottom: 8px; display: flex; justify-content: space-between; }
+.kcard { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+.kcard.overdue { border-color: var(--danger); background: var(--danger-soft); }
+.kcard .mv { display: flex; gap: 6px; justify-content: space-between; }
+
+.contact { font-size: 0.85rem; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.contact span { user-select: all; }
+.todolist { border-top: 1px solid var(--line); padding-top: 8px; font-size: 0.84rem; display: grid; gap: 4px; }
+.todolist li { display: flex; justify-content: space-between; gap: 8px; }
+
+.rank { font-family: var(--f-display); font-size: 1.5rem; font-weight: 700; color: var(--accent); min-width: 2.2ch; }
+.score { font-family: var(--f-display); font-size: 1.4rem; font-weight: 700; white-space: nowrap; }
+.score small { font-family: var(--f-mono); font-size: 0.75rem; font-weight: 400; color: var(--muted); }
+.meters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.meter { font-size: 0.74rem; color: var(--muted); }
+.meter .seg5 { display: flex; gap: 2px; margin-top: 2px; }
+.meter .seg5 i { flex: 1; height: 6px; border-radius: 2px; background: var(--surface2); }
+.meter .seg5 i.on { background: var(--accent); }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.84rem; }
+.kv b { display: block; font-family: var(--f-mono); font-weight: 500; font-size: 0.95rem; }
+.kv span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+.findings { white-space: pre-wrap; font-size: 0.9rem; }
+.q { border-top: 1px solid var(--line); padding-top: 8px; font-size: 0.85rem; white-space: pre-wrap; }
+.q b { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); display: block; }
+a { color: var(--accent); overflow-wrap: anywhere; }
+
+.back { position: fixed; inset: 0; z-index: 50; background: rgba(8, 12, 10, 0.55); display: flex; align-items: center; justify-content: center;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.modal { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 580px; max-height: 100%; overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field.full { grid-column: 1 / -1; }
+.field label { font-size: 0.78rem; color: var(--muted); }
+.field input, .field select, .field textarea { border: 1px solid var(--line); background-color: var(--bg); border-radius: 6px; padding: 7px 9px; min-height: 38px; width: 100%; }
+.field textarea { resize: vertical; }
+.field output { font-family: var(--f-mono); font-size: 0.8rem; }
+.modal .foot { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.modal .foot div { display: flex; gap: 8px; }
+textarea.json { width: 100%; min-height: 240px; font-family: var(--f-mono); font-size: 0.78rem; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 6px; z-index: 60; max-width: 90vw; font-size: 0.88rem; }
+#toast.err { background: var(--danger); color: var(--surface); }
+.ro [data-write] { display: none !important; }
+
+.lane { margin-bottom: 26px; }
+.lane > h3 { font-size: 1.05rem; }
+.lane > .small { margin: 2px 0 10px; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px 0; }
+.step { width: 236px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.step h3 { font-size: 1rem; }
+.step .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.step .num { font-family: var(--f-mono); font-size: 0.78rem; color: var(--muted); }
+.step dl { margin: 0; font-size: 0.82rem; display: grid; gap: 4px; }
+.step dt { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.step dd { margin: 0; overflow-wrap: anywhere; }
+.step .cost { margin-top: auto; border-top: 1px solid var(--line); padding-top: 6px; font-family: var(--f-mono); font-size: 0.86rem; }
+.step .cost small { display: block; color: var(--muted); font-size: 0.72rem; }
+.step.add { align-items: center; justify-content: center; border-style: dashed; background: transparent; min-height: 90px; }
+.arr { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.3rem; }
+.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
+@media (max-width: 760px) {
+  .flow { flex-direction: column; align-items: stretch; }
+  .step { width: auto; }
+  .arr { flex-basis: 28px; transform: rotate(90deg); }
+}
+@media (max-width: 760px) {
+  #overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:last-child { grid-column: 1 / -1; }
+  h1 { font-size: 1.55rem; }
+  .fields { grid-template-columns: 1fr; }
+  .tside { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+  .trow { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Coffee Business Workspace</h1>
+      <p class="sub">Goals, to-dos, people, process map, ideas and research in one place.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" data-act="export">Export JSON</button>
+      <button class="btn" data-act="import" data-write>Import JSON</button>
+      <button class="btn" data-act="clearsample" data-write id="clearBtn">Clear sample data</button>
+    </div>
+  </header>
+  <div id="store" class="store" role="status"><i></i><span>Loading your workspace…</span></div>
+  <section id="overview" aria-label="Overview"></section>
+  <nav class="tabs"><div class="tablist" role="tablist" id="tabs"></div></nav>
+  <main id="view"></main>
+</div>
+<input type="file" id="impfile" accept=".json,application/json" hidden>
+<div id="modalRoot"></div>
+<div id="toast" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+  var COLS = ['goals', 'todos', 'people', 'process', 'ideas', 'research'];
+  var S = { goals: [], todos: [], people: [], process: [], ideas: [], research: [] };
+  var UI = { tab: 'goals', todoView: 'list', fOwner: '', fPrio: '', fRole: '', q: '', cat: '', ready: false, mode: 'loading', ro: false };
+  var db = null, downloads = null, LS_KEY = 'coffee-workspace-v1';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var iso = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var today = iso(new Date());
+  var plus = function (n) { var d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+  var dayDiff = function (a, b) { return Math.round((Date.parse(a + 'T00:00:00Z') - Date.parse(b + 'T00:00:00Z')) / 864e5); };
+  var fmtDate = function (s) { return s ? new Date(s + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+  var eurFmt = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  var eur = function (n) { return n == null || n === '' ? '—' : eurFmt.format(n); };
+  var uid = function () { return Math.random().toString(36).slice(2, 8) + Date.now().toString(36); };
+  var slug = function (s) { return String(s).replace(/\s+/g, '-'); };
+  var cap = function (s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; };
+  var pill = function (t, c) { return '<span class="pill ' + esc(slug(c || t)) + '">' + esc(t) + '</span>'; };
+  var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+  /* ---------- schema ---------- */
+  var GOAL_TYPES = [['short-term', 'Short-term'], ['mid-term', 'Mid-term'], ['long-term', 'Long-term']];
+  var GOAL_STATUS = ['not started', 'active', 'done', 'dropped'];
+  var PRIO = ['high', 'med', 'low'];
+  var TODO_STATUS = ['todo', 'doing', 'done'];
+  var ROLES = ['founder', 'supplier', 'roaster', 'barista', 'investor', 'accountant', 'customer', 'advisor'];
+  var MODELS = ['cafe', 'roastery', 'online bean shop', 'subscription', 'mobile cart', 'wholesale', 'coffee education', 'equipment', 'other'];
+  var CATS = ['sourcing', 'roasting', 'pricing', 'regulation', 'market', 'equipment', 'marketing', 'competitors'];
+  var CONF = ['high', 'medium', 'low'];
+  var STAGES = ['farm', 'processing', 'export', 'import', 'roasting', 'retail', 'other'];
+  var LANES = [['main', 'Main chain: farm in India to roasted coffee in Germany', 'Every step all the way to roasted coffee.'],
+    ['cup', 'Branch A: sold as a cup in a café', 'Continues from the last main step.'],
+    ['bag', 'Branch B: sold as a bag in a supermarket', 'Continues from the last main step.']];
+  var pairs = function (a) { return a.map(function (x) { return [x, cap(x)]; }); };
+  var scoreOpts = [[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']];
+
+  var SCHEMA = {
+    goals: { label: 'Goal', def: function () { return { type: 'short-term', status: 'not started', progress: 0 }; }, fields: [
+      { k: 'title', l: 'Title', t: 'text', req: 1, full: 1 },
+      { k: 'description', l: 'Description', t: 'textarea', full: 1 },
+      { k: 'type', l: 'Type', t: 'select', o: GOAL_TYPES },
+      { k: 'status', l: 'Status', t: 'select', o: pairs(GOAL_STATUS) },
+      { k: 'target', l: 'Target date', t: 'date' },
+      { k: 'metric', l: 'Metric (e.g. €5k monthly revenue)', t: 'text' },
+      { k: 'progress', l: 'Progress', t: 'range', full: 1 }] },
+    todos: { label: 'ToDo', def: function () { return { priority: 'med', status: 'todo', goal: '', owner: '' }; }, fields: [
+      { k: 'task', l: 'Task', t: 'text', req: 1, full: 1 },
+      { k: 'goal', l: 'Linked goal', t: 'select', o: function () { return [['', '— none —']].concat(S.goals.map(function (g) { return [g.id, g.title]; })); } },
+      { k: 'owner', l: 'Owner', t: 'select', o: function () { return [['', 'Unassigned']].concat(S.people.map(function (p) { return [p.id, p.name]; })); } },
+      { k: 'due', l: 'Due date', t: 'date' },
+      { k: 'priority', l: 'Priority', t: 'select', o: pairs(PRIO) },
+      { k: 'status', l: 'Status', t: 'select', o: pairs(TODO_STATUS) }] },
+    people: { label: 'Person', def: function () { return { role: 'supplier' }; }, fields: [
+      { k: 'name', l: 'Name', t: 'text', req: 1 },
+      { k: 'role', l: 'Role', t: 'select', o: pairs(ROLES) },
+      { k: 'company', l: 'Company', t: 'text' },
+      { k: 'lastContact', l: 'Last contact', t: 'date' },
+      { k: 'email', l: 'Email', t: 'email' },
+      { k: 'phone', l: 'Phone', t: 'tel' },
+      { k: 'notes', l: 'Notes', t: 'textarea', full: 1 }] },
+    process: { label: 'Process step', def: function () { return { lane: 'main', stage: 'farm' }; }, fields: [
+      { k: 'name', l: 'Step name', t: 'text', req: 1 },
+      { k: 'stage', l: 'Stage', t: 'select', o: pairs(STAGES) },
+      { k: 'lane', l: 'Where it sits', t: 'select', o: LANES.map(function (l) { return [l[0], l[1]]; }) },
+      { k: 'location', l: 'Location (e.g. Coorg, India)', t: 'text' },
+      { k: 'description', l: 'Description', t: 'textarea', full: 1 },
+      { k: 'input', l: 'Input (what comes in)', t: 'textarea' },
+      { k: 'output', l: 'Output (what goes out)', t: 'textarea' },
+      { k: 'objectives', l: 'Objectives', t: 'textarea', full: 1 },
+      { k: 'cost', l: 'Cost added (€ per kg of coffee)', t: 'number', min: 0 },
+      { k: 'costNote', l: 'Cost basis / assumptions', t: 'text' }] },
+    ideas: { label: 'Idea', def: function () { return { model: 'other', cost: 3, demand: 3, competition: 3, skills: 3 }; }, fields: [
+      { k: 'name', l: 'Name', t: 'text', req: 1 },
+      { k: 'model', l: 'Model', t: 'select', o: pairs(MODELS) },
+      { k: 'description', l: 'Description', t: 'textarea', full: 1 },
+      { k: 'customer', l: 'Target customer', t: 'text', full: 1 },
+      { k: 'startup', l: 'Startup cost estimate (€)', t: 'number', min: 0 },
+      { k: 'revenue', l: 'Monthly revenue estimate (€)', t: 'number', min: 0 },
+      { k: 'risks', l: 'Risks', t: 'textarea', full: 1 },
+      { k: 'cost', l: 'Cost score (5 = cheap to start)', t: 'select', o: scoreOpts, n: 1 },
+      { k: 'demand', l: 'Demand score (5 = strong)', t: 'select', o: scoreOpts, n: 1 },
+      { k: 'competition', l: 'Competition score (5 = weak)', t: 'select', o: scoreOpts, n: 1 },
+      { k: 'skills', l: 'My skills score (5 = strong fit)', t: 'select', o: scoreOpts, n: 1 }] },
+    research: { label: 'Research entry', def: function () { return { category: 'sourcing', confidence: 'medium', date: today }; }, fields: [
+      { k: 'topic', l: 'Topic', t: 'text', req: 1, full: 1 },
+      { k: 'category', l: 'Category', t: 'select', o: pairs(CATS) },
+      { k: 'confidence', l: 'Confidence', t: 'select', o: pairs(CONF) },
+      { k: 'findings', l: 'Key findings', t: 'textarea', full: 1 },
+      { k: 'url', l: 'Source URL', t: 'url' },
+      { k: 'date', l: 'Date researched', t: 'date' },
+      { k: 'questions', l: 'Open questions', t: 'textarea', full: 1 }] }
+  };
+
+  /* ---------- sample data ---------- */
+  function sampleData() {
+    var R0 = function (id, name, role, company, email, phone, notes, lc) { return { id: id, name: name, role: role, company: company, email: email, phone: phone, notes: notes, lastContact: lc }; };
+    var C = function (id, lane, order, name, stage, location, description, input, output, objectives, cost, costNote) { return { id: id, lane: lane, order: order, name: name, stage: stage, location: location, description: description, input: input, output: output, objectives: objectives, cost: cost, costNote: costNote, sample: true }; };
+    var G = function (id, title, description, type, target, metric, progress, status) { return { id: id, title: title, description: description, type: type, target: target, metric: metric, progress: progress, status: status, sample: true }; };
+    var T = function (id, task, goal, owner, due, priority, status) { return { id: id, task: task, goal: goal, owner: owner, due: due, priority: priority, status: status, sample: true }; };
+    var I = function (id, name, model, description, customer, startup, revenue, risks, c, d, k, s) { return { id: id, name: name, model: model, description: description, customer: customer, startup: startup, revenue: revenue, risks: risks, cost: c, demand: d, competition: k, skills: s, sample: true }; };
+    var R = function (id, topic, category, findings, url, date, confidence, questions) { return { id: id, topic: topic, category: category, findings: findings, url: url, date: date, confidence: confidence, questions: questions, sample: true }; };
+    return {
+      people: [
+        R0('bharath', 'Bharath Vishwanath Hassan', 'founder', 'N/A', 'bharathuvc@gmail.com', '+91 98861 80071', 'Solo founder. Handles back office and all important decisions.', ''),
+        R0('jugal', 'Jugal Vaidya', 'advisor', 'N/A', 'jugalvaidya@gmail.com', '015731311668', 'Advisor.', ''),
+        R0('dhruv', 'Dhruv Bhavsar', 'advisor', 'N/A', 'bhavsardhruv47@gmail.com', '017630148532', 'Advisor. Leads negotiation, sales and front-office contact.', '')
+      ],
+      process: [
+        C('s1', 'main', 1, 'Nursery and planting', 'farm', 'Coffee estate, India', 'Raise seedlings, plant under shade trees. First real crop after about 3 to 4 years.', 'Seeds or seedlings, soil, shade trees, labour', 'Young coffee plants in the field', 'Healthy, disease-resistant plants of the right variety', 0.3, 'Placeholder estimate. Replace with grower figure.'),
+        C('s2', 'main', 2, 'Cultivation and harvest', 'farm', 'Coffee estate, India', 'Pruning, weeding, pest control, then selective picking of ripe cherries.', 'Labour, fertiliser, water', 'Ripe coffee cherries', 'High yield, only ripe cherries picked', 1.2, 'Placeholder estimate. Replace with grower figure.'),
+        C('s3', 'main', 3, 'Cherry processing', 'processing', 'Estate processing unit', 'Washed or natural processing: pulping, fermenting and drying the cherries.', 'Ripe cherries, water, drying yards', 'Dried parchment coffee or dried cherry', 'Consistent moisture of about 11 to 12 percent, no defects', 0.4, 'Placeholder estimate.'),
+        C('s4', 'main', 4, 'Hulling, grading and sorting', 'processing', 'Curing works, India', 'Remove parchment or husk, grade by bean size, sort out defects.', 'Parchment coffee', 'Graded green coffee beans', 'Export-grade green coffee with a clear grade and lot number', 0.25, 'Placeholder estimate.'),
+        C('s5', 'main', 5, 'Transport to port', 'export', 'Estate to Mangalore / Kochi / Chennai', 'Truck bagged green coffee to the port, store in warehouse.', 'Bagged green coffee', 'Coffee at the port', 'Low damage and moisture risk in transit', 0.1, 'Placeholder estimate.'),
+        C('s6', 'main', 6, 'Export documents and clearance', 'export', 'India', 'Export registration, phytosanitary certificate, origin documents.', 'Coffee at the port, paperwork', 'Cleared export container', 'Compliant paperwork so the shipment is not held', 0.1, 'Placeholder estimate. Check Coffee Board requirements.'),
+        C('s7', 'main', 7, 'Ocean freight to Hamburg', 'export', 'India to Hamburg', 'Container shipping, about 4 to 6 weeks door to port.', 'Cleared container', 'Container arriving in Hamburg', 'Keep freight cost low and dry, avoid condensation', 0.25, 'Placeholder estimate. Get a forwarder quote.'),
+        C('s8', 'main', 8, 'Import, customs and EUDR checks', 'import', 'Germany', 'Customs clearance, import duty, deforestation-regulation due diligence, importer margin.', 'Container, shipping documents, geolocation data', 'Green coffee cleared for the EU market', 'Legally placed on the EU market with the paperwork the importer needs', 0.6, 'Placeholder estimate. Ask the importer for a landed price.'),
+        C('s9', 'main', 9, 'Warehouse and delivery to roaster', 'import', 'Germany', 'Store green coffee, deliver sacks to the roaster.', 'Cleared green coffee', 'Green coffee at the roastery', 'Fresh stock, short storage time', 0.15, 'Placeholder estimate.'),
+        C('s10', 'main', 10, 'Roasting', 'roasting', 'Roastery, Germany', 'Roast to profile, cool, rest. About 15 to 20 percent weight lost in the roaster.', 'Green coffee, gas or electricity, labour', 'Roasted whole bean coffee', 'Repeatable roast profile, no defects, consistent taste', 0.8, 'Placeholder estimate. Replace with own roasting cost per kg.'),
+        C('s11', 'cup', 1, 'Brewing and service', 'retail', 'Café, Germany', 'Grind, brew and serve. One kg of roasted coffee gives roughly 50 to 60 cups.', 'Roasted coffee, milk, cups, labour, rent', 'Cup of coffee for the customer', 'Consistent cup quality at the target price per cup', 12, 'Placeholder estimate. Milk, cups, labour, rent per kg of coffee used.'),
+        C('s12', 'bag', 1, 'Packaging and labelling', 'roasting', 'Roastery, Germany', 'Fill valve bags, seal, label with roast date, origin and legal information.', 'Roasted coffee, bags, labels', 'Retail-ready bags', 'Meets German food labelling rules, looks good on the shelf', 1.5, 'Placeholder estimate.'),
+        C('s13', 'bag', 2, 'Distribution to supermarket', 'retail', 'Germany', 'Ship pallets or cartons to the supermarket or its distribution centre.', 'Packed bags', 'Bags delivered to the store', 'Low transport cost per bag, no damaged stock', 0.8, 'Placeholder estimate.'),
+        C('s14', 'bag', 3, 'Retail margin and shelf', 'retail', 'Supermarket, Germany', 'Supermarket listing, shelf space and margin.', 'Bags in store', 'Bag on the shelf, bought by the customer', 'Listing accepted at a price that still leaves us a margin', 3, 'Placeholder estimate. Retail margin per kg of coffee.')
+      ],
+      goals: [
+        G('g7', 'Pick a business name and domain', 'Name, domain and basic brand colours decided.', 'short-term', plus(-10), 'Name + domain registered', 100, 'done'),
+        G('g1', 'Register the business and food-safety paperwork', 'Trade registration, food business registration and staff hygiene training.', 'short-term', plus(30), 'All registrations filed', 40, 'active'),
+        G('g2', 'Win the first wholesale customer', 'One café buying on a regular schedule.', 'short-term', plus(60), '1 café buying 10+ kg per month', 25, 'active'),
+        G('g3', 'Launch the online bean shop', 'Shop with 3 single-origin coffees, shipping set up.', 'mid-term', plus(150), '20 orders in the first month', 10, 'active'),
+        G('g4', 'Reach €5k monthly revenue', 'Combined shop, subscription and wholesale revenue.', 'mid-term', plus(300), '€5k monthly revenue', 0, 'not started'),
+        G('g6', 'Run our own roastery', 'Own 5–15 kg roaster in production.', 'long-term', plus(540), 'Roaster installed and producing', 0, 'not started'),
+        G('g5', 'Open the first café', 'Neighbourhood café with a roasting window.', 'long-term', plus(730), 'Break-even within 12 months of opening', 0, 'not started')
+      ],
+      todos: [
+        T('t1', 'Ask the Ordnungsamt which permits a non-alcohol coffee business needs', 'g1', 'bharath', plus(-3), 'high', 'doing'),
+        T('t2', 'File the trade registration (Gewerbeanmeldung)', 'g1', 'bharath', plus(7), 'high', 'todo'),
+        T('t3', 'Book the hygiene briefing (Infektionsschutzbelehrung)', 'g1', '', plus(14), 'med', 'todo'),
+        T('t4', 'Request sample lots from Cumbre Verde', 'g3', '', plus(-1), 'med', 'todo'),
+        T('t5', 'Trial roast session at Kupferbrand', 'g2', '', plus(5), 'high', 'doing'),
+        T('t6', 'Prepare price list and tasting cards for wholesale', 'g2', 'bharath', plus(10), 'med', 'todo'),
+        T('t7', 'Pitch Café Linde with three sample bags', 'g2', 'bharath', plus(18), 'high', 'todo'),
+        T('t8', 'Set up bookkeeping categories and VAT plan', 'g4', '', plus(21), 'low', 'todo'),
+        T('t9', 'Shortlist shop platforms and compare fees', 'g3', 'bharath', plus(25), 'med', 'todo'),
+        T('t10', 'Register the domain and set up email', 'g7', 'bharath', plus(-12), 'med', 'done'),
+        T('t11', 'Send first investor update', 'g4', 'bharath', plus(-6), 'low', 'done')
+      ],
+      ideas: [
+        I('i1', 'Monthly bean subscription', 'subscription', 'Two bags a month, chosen by season, shipped in a letterbox box.', 'Home brewers who already buy specialty beans', 3000, 1800, 'Churn, shipping cost per parcel, needs steady roasting schedule.', 4, 4, 3, 4),
+        I('i2', 'Online bean shop', 'online bean shop', 'Single-origin shop with fresh roast dates and brew guides.', 'Home brewers across Germany', 4500, 2200, 'Crowded online market, ad costs, shipping returns.', 4, 4, 2, 4),
+        I('i3', 'Wholesale to local cafés', 'wholesale', 'House blend and one rotating single origin for 5 to 10 local cafés.', 'Independent cafés and offices', 8000, 4500, 'Long sales cycles, price pressure, needs reliable volume.', 3, 4, 3, 3),
+        I('i4', 'Coffee education workshops', 'coffee education', 'Cupping and home-brewing evenings, sold as tickets and corporate events.', 'Hobbyists and companies', 2000, 900, 'Revenue depends on event count, low scalability.', 5, 2, 3, 3),
+        I('i5', 'Mobile coffee cart', 'mobile cart', 'Bike or trailer cart for markets and events.', 'Market visitors, event organisers', 18000, 3500, 'Weather, event permits, seasonal demand.', 2, 3, 3, 4),
+        I('i6', 'Neighbourhood café with roaster', 'cafe', 'Café with a small roasting window and retail beans.', 'Local residents and remote workers', 120000, 14000, 'High fixed costs, lease risk, staffing.', 1, 4, 2, 3)
+      ],
+      research: [
+        R('r1', 'Green bean sourcing, fair trade and direct trade', 'sourcing',
+          'Fairtrade is a certification with a minimum price and premium. Direct trade has no single standard, so quality and price terms come from each relationship.\nSmall roasters usually buy through importers who handle shipping, customs and paperwork.',
+          '', plus(-20), 'medium', 'What minimum lot size do importers accept?\nHow much price premium does a transparent direct-trade offer need to carry?\nWhich certificates do customers actually ask for?'),
+        R('r2', 'Roasting equipment costs', 'equipment',
+          'Not researched yet. Collect quotes for a 1 to 2 kg sample roaster and a 5 to 15 kg production roaster, including afterburner, extraction and installation.',
+          '', '', 'low', 'New or used?\nGas or electric?\nWhat does a shared roasting arrangement cost per kg compared with owning?'),
+        R('r3', 'Café licensing and food-safety rules in Germany', 'regulation',
+          'Typical steps: trade registration, registering the food business with the local food inspection office, hygiene concept based on HACCP principles, and a hygiene briefing for staff under the Infektionsschutzgesetz.\nWhether a restaurant licence is needed depends on the federal state, mainly when alcohol is served.',
+          '', plus(-14), 'medium', 'What does our city require for a food-and-drink business that serves no alcohol?\nAre roasting emissions regulated at our location?\nDo we need separate rules for online shipping of food?'),
+        R('r4', 'Specialty coffee market trends', 'market',
+          'Not researched yet. Look for demand data on home brewing, cold coffee drinks, plant milks and subscriptions in Germany.',
+          '', '', 'low', 'Which reports are free to access?\nWhich trends matter for a small roaster rather than a chain?'),
+        R('r5', 'Pricing and margin per cup', 'pricing',
+          'Worked example with assumed inputs: 18 g of coffee at €25/kg = €0.45, milk €0.15, cup and lid €0.10, total about €0.70. At a €3.80 flat white that is roughly 18% ingredient cost before labour, rent and fees.\nReplace the inputs with real quotes.',
+          '', plus(-6), 'low', 'What do competitors within walking distance charge?\nWhat share of sales is take-away?'),
+        R('r6', 'Subscription model benchmarks', 'marketing',
+          'Not researched yet. Gather typical monthly churn, average order value and shipping cost per parcel for coffee subscriptions.',
+          '', '', 'low', 'What churn is normal after month three?\nWhich plans (weekly, monthly, flexible) do customers prefer?'),
+        R('r7', 'Competitor analysis', 'competitors',
+          'Not researched yet. List local roasters and online shops, with price per 250 g, roast dates, shipping fees and brand positioning.',
+          '', '', 'low', 'Who are the five closest competitors?\nWhere is there a gap in range or service?'),
+        R('r8', 'EU deforestation regulation (EUDR) impact on importers', 'regulation',
+          'Coffee is one of the products covered. Operators and traders placing it on the EU market must show it is deforestation-free and legally produced, backed by geolocation data for the plots.\nApplication dates have been pushed back more than once, so check the current dates before planning around them.',
+          'https://environment.ec.europa.eu/topics/forests/deforestation/regulation-deforestation-free-products_en', plus(-3), 'low', 'Does a small roaster buying through an importer count as an operator or trader?\nWhat data will suppliers pass on to us?\nWhat are the current application dates?')
+      ]
+    };
+  }
+
+  /* ---------- store ---------- */
+  var seeding = false;
+  function persistLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(S)); UI.mode = 'local'; } catch (e) { UI.mode = 'memory'; }
+  }
+  function loadLocal() {
+    var raw = null;
+    try { raw = localStorage.getItem(LS_KEY); } catch (e) {}
+    if (raw) {
+      try { var j = JSON.parse(raw); COLS.forEach(function (c) { S[c] = Array.isArray(j[c]) ? j[c] : []; }); if (!Array.isArray(j.process)) S.process = sampleData().process; UI.mode = 'local'; return; } catch (e) {}
+    }
+    var d = sampleData();
+    COLS.forEach(function (c) { S[c] = d[c]; });
+    persistLocal();
+  }
+  async function retry(fn) {
+    try { return await fn(); } catch (e) {
+      if (e && (e.code === 'unavailable' || e.code === 'resource_exhausted')) { await wait(700); return fn(); }
+      throw e;
+    }
+  }
+  var clean = function (o) { return JSON.parse(JSON.stringify(o)); };
+  async function save(col, obj) {
+    obj = clean(obj);
+    if (db) {
+      try { await retry(function () { return db.doc(col + '/' + obj.id).set(obj); }); }
+      catch (e) { toast('Could not save: ' + ((e && e.message) || 'storage error'), true); }
+      return;
+    }
+    var i = S[col].findIndex(function (x) { return x.id === obj.id; });
+    if (i >= 0) S[col][i] = obj; else S[col].push(obj);
+    persistLocal(); render();
+  }
+  async function remove(col, id) {
+    if (db) {
+      try { await retry(function () { return db.doc(col + '/' + id).delete(); }); }
+      catch (e) { toast('Could not delete: ' + ((e && e.message) || 'storage error'), true); }
+      return;
+    }
+    S[col] = S[col].filter(function (x) { return x.id !== id; });
+    persistLocal(); render();
+  }
+  async function seedDb() {
+    var d = sampleData();
+    for (var c = 0; c < COLS.length; c++) for (var k = 0; k < d[COLS[c]].length; k++) {
+      var o = d[COLS[c]][k];
+      await retry(function () { return db.doc(COLS[c] + '/' + o.id).set(o); });
+    }
+    await retry(function () { return db.doc('meta/app').set({ seeded: true, processSeeded: true }); });
+  }
+  async function seedProcess() {
+    var d = sampleData().process;
+    if (!S.process.length) for (var k = 0; k < d.length; k++) { var o = d[k]; await retry(function () { return db.doc('process/' + o.id).set(o); }); }
+    await retry(function () { return db.doc('meta/app').set({ seeded: true, processSeeded: true }); });
+  }
+  async function replaceAll(data) {
+    for (var c = 0; c < COLS.length; c++) {
+      var col = COLS[c];
+      S[col].slice().forEach(function () {});
+      var old = S[col].slice();
+      for (var i = 0; i < old.length; i++) await remove(col, old[i].id);
+    }
+    for (var c2 = 0; c2 < COLS.length; c2++) for (var j = 0; j < data[COLS[c2]].length; j++) await save(COLS[c2], data[COLS[c2]][j]);
+  }
+  async function clearSample() {
+    for (var c = 0; c < COLS.length; c++) {
+      var items = S[COLS[c]].filter(function (x) { return x.sample; });
+      for (var i = 0; i < items.length; i++) await remove(COLS[c], items[i].id);
+    }
+    toast('Sample data cleared');
+  }
+
+  /* ---------- helpers ---------- */
+  var person = function (id) { return S.people.find(function (p) { return p.id === id; }); };
+  var goal = function (id) { return S.goals.find(function (g) { return g.id === id; }); };
+  var isOpen = function (t) { return t.status !== 'done'; };
+  var isOverdue = function (t) { return isOpen(t) && t.due && t.due < today; };
+  var total = function (i) { return (+i.cost || 0) + (+i.demand || 0) + (+i.competition || 0) + (+i.skills || 0); };
+  var ranked = function () { return S.ideas.slice().sort(function (a, b) { return total(b) - total(a) || (+b.revenue || 0) - (+a.revenue || 0); }); };
+  function dueText(t) {
+    var d = dayDiff(t.due, today);
+    if (d < 0 && isOpen(t)) return Math.abs(d) + 'd overdue';
+    if (d === 0) return 'Today';
+    if (d === 1) return 'Tomorrow';
+    return fmtDate(t.due);
+  }
+  function ago(s) {
+    if (!s) return 'never';
+    var d = dayDiff(today, s);
+    if (d <= 0) return 'today';
+    if (d === 1) return 'yesterday';
+    if (d < 45) return d + ' days ago';
+    return Math.round(d / 30) + ' months ago';
+  }
+  var toastTimer;
+  function toast(msg, err) {
+    var el = $('#toast'); el.textContent = msg; el.className = err ? 'err' : ''; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 3500);
+  }
+
+  /* ---------- views ---------- */
+  function overview() {
+    var open = S.todos.filter(isOpen), od = open.filter(isOverdue).length, top = ranked()[0];
+    return '<button class="stat" data-act="tab" data-tab="goals"><span class="k">Active goals</span><span class="v">' + S.goals.filter(function (g) { return g.status === 'active'; }).length + '</span></button>' +
+      '<button class="stat" data-act="tab" data-tab="todos"><span class="k">Open ToDos</span><span class="v">' + open.length + '</span></button>' +
+      '<button class="stat' + (od ? ' bad' : '') + '" data-act="tab" data-tab="todos"><span class="k">Overdue</span><span class="v">' + od + '</span></button>' +
+      '<button class="stat" data-act="tab" data-tab="ideas"><span class="k">Idea ranked #1</span><span class="v txt">' + (top ? esc(top.name) : '—') + '</span><span class="s mono">' + (top ? total(top) + ' / 20' : 'no ideas yet') + '</span></button>' +
+      '<button class="stat" data-act="tab" data-tab="research"><span class="k">Research entries</span><span class="v">' + S.research.length + '</span></button>';
+  }
+  var addBtn = function (col, text) { return '<button class="btn primary" data-act="add" data-col="' + col + '" data-write>' + esc(text) + '</button>'; };
+  var editBtn = function (col, id) { return '<button class="btn sm" data-act="edit" data-col="' + col + '" data-id="' + esc(id) + '" data-write>Edit</button>'; };
+
+  function viewGoals() {
+    var h = '<div class="bar-row"><span class="grow muted small">Progress bars use a light-to-dark roast scale.</span>' + addBtn('goals', 'Add goal') + '</div>';
+    GOAL_TYPES.forEach(function (gt) {
+      var list = S.goals.filter(function (g) { return g.type === gt[0]; });
+      h += '<section class="grp"><h2>' + gt[1] + '<span class="n">' + list.length + '</span></h2>';
+      if (!list.length) h += '<div class="empty">No ' + gt[1].toLowerCase() + ' goals yet.</div>';
+      else h += '<div class="grid">' + list.map(goalCard).join('') + '</div>';
+      h += '</section>';
+    });
+    return h;
+  }
+  function goalCard(g) {
+    var todos = S.todos.filter(function (t) { return t.goal === g.id; });
+    var open = todos.filter(isOpen).length, p = Math.max(0, Math.min(100, +g.progress || 0));
+    var left = g.target ? dayDiff(g.target, today) : null;
+    var tgt = g.target ? fmtDate(g.target) + (g.status === 'done' || g.status === 'dropped' ? '' : left < 0 ? ' (' + Math.abs(left) + 'd past)' : ' (' + left + 'd left)') : 'No target date';
+    return '<article class="card' + (g.status === 'dropped' ? ' dim' : '') + '"><div class="row"><h3>' + esc(g.title) + '</h3>' + pill(g.status) + '</div>' +
+      (g.metric ? '<div class="mono small">' + esc(g.metric) + '</div>' : '') +
+      '<div class="progress"><div class="bar"><i style="width:' + p + '%"></i></div><b id="pv-' + esc(g.id) + '">' + p + '%</b></div>' +
+      '<input type="range" min="0" max="100" step="5" value="' + p + '" data-act="prog" data-id="' + esc(g.id) + '" aria-label="Progress for ' + esc(g.title) + '" data-write>' +
+      (g.description ? '<p class="small muted">' + esc(g.description) + '</p>' : '') +
+      '<div class="card-foot"><span class="meta"><span>' + tgt + '</span><span>' + open + ' open / ' + todos.length + ' ToDos</span></span>' + editBtn('goals', g.id) + '</div></article>';
+  }
+
+  function filteredTodos() {
+    return S.todos.filter(function (t) {
+      if (UI.fOwner === '_none' ? t.owner : UI.fOwner && t.owner !== UI.fOwner) return false;
+      if (UI.fPrio && t.priority !== UI.fPrio) return false;
+      return true;
+    });
+  }
+  function chips(t) {
+    var g = goal(t.goal), p = person(t.owner);
+    return '<div class="meta">' + (g ? '<span>Goal: ' + esc(g.title) + '</span>' : '') + '<span>' + (p ? esc(p.name) : 'Unassigned') + '</span></div>';
+  }
+  function todoRow(t) {
+    var od = isOverdue(t);
+    return '<li class="trow' + (od ? ' overdue' : '') + (t.status === 'done' ? ' done' : '') + '">' +
+      '<button class="chk" data-act="toggledone" data-id="' + esc(t.id) + '" aria-pressed="' + (t.status === 'done') + '" aria-label="Mark done" data-write>' + (t.status === 'done' ? '✓' : '') + '</button>' +
+      '<div class="tmain"><button class="linkish" data-act="edit" data-col="todos" data-id="' + esc(t.id) + '">' + esc(t.task) + '</button>' + chips(t) + '</div>' +
+      '<div class="tside">' + (t.due ? '<span class="due' + (od ? ' od' : '') + '">' + dueText(t) + '</span>' : '') + '<span>' + pill(t.priority) + ' ' + pill(t.status) + '</span></div></li>';
+  }
+  function viewTodos() {
+    var ownerOpts = '<option value="">All owners</option><option value="_none"' + (UI.fOwner === '_none' ? ' selected' : '') + '>Unassigned</option>' +
+      S.people.map(function (p) { return '<option value="' + esc(p.id) + '"' + (UI.fOwner === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+    var prioOpts = '<option value="">All priorities</option>' + PRIO.map(function (p) { return '<option value="' + p + '"' + (UI.fPrio === p ? ' selected' : '') + '>' + cap(p) + '</option>'; }).join('');
+    var h = '<div class="bar-row"><div class="seg" role="group" aria-label="View"><button data-act="tview" data-v="list" aria-pressed="' + (UI.todoView === 'list') + '">List</button><button data-act="tview" data-v="board" aria-pressed="' + (UI.todoView === 'board') + '">Board</button></div>' +
+      '<select id="fOwner" aria-label="Filter by owner">' + ownerOpts + '</select><select id="fPrio" aria-label="Filter by priority">' + prioOpts + '</select><span class="grow"></span>' + addBtn('todos', 'Add ToDo') + '</div>';
+    var list = filteredTodos();
+    if (!list.length) return h + '<div class="empty">No ToDos match these filters.</div>';
+    if (UI.todoView === 'list') {
+      var rank = { high: 0, med: 1, low: 2 };
+      list.sort(function (a, b) {
+        return (a.status === 'done') - (b.status === 'done') || (a.due || '9999').localeCompare(b.due || '9999') || rank[a.priority] - rank[b.priority];
+      });
+      return h + '<ul class="plain">' + list.map(todoRow).join('') + '</ul>';
+    }
+    h += '<div class="board">';
+    TODO_STATUS.forEach(function (s, idx) {
+      var col = list.filter(function (t) { return t.status === s; }).sort(function (a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
+      h += '<section class="col"><h2>' + cap(s) + '<span class="mono muted small">' + col.length + '</span></h2>';
+      h += col.map(function (t) {
+        var od = isOverdue(t);
+        return '<div class="kcard' + (od ? ' overdue' : '') + '"><button class="linkish" data-act="edit" data-col="todos" data-id="' + esc(t.id) + '">' + esc(t.task) + '</button>' + chips(t) +
+          '<div class="meta">' + pill(t.priority) + (t.due ? '<span class="due' + (od ? ' od' : '') + '">' + dueText(t) + '</span>' : '') + '</div>' +
+          '<div class="mv" data-write><button class="btn sm" data-act="move" data-dir="-1" data-id="' + esc(t.id) + '"' + (idx === 0 ? ' disabled' : '') + ' aria-label="Move back">◀</button>' +
+          '<button class="btn sm" data-act="move" data-dir="1" data-id="' + esc(t.id) + '"' + (idx === 2 ? ' disabled' : '') + ' aria-label="Move forward">▶</button></div></div>';
+      }).join('') || '<div class="muted small">Nothing here.</div>';
+      h += '</section>';
+    });
+    return h + '</div>';
+  }
+
+  function viewPeople() {
+    var roleOpts = '<option value="">All roles</option>' + ROLES.map(function (r) { return '<option value="' + r + '"' + (UI.fRole === r ? ' selected' : '') + '>' + cap(r) + '</option>'; }).join('');
+    var h = '<div class="bar-row"><select id="fRole" aria-label="Filter by role">' + roleOpts + '</select><span class="grow"></span>' + addBtn('people', 'Add person') + '</div>';
+    var list = S.people.filter(function (p) { return !UI.fRole || p.role === UI.fRole; });
+    if (!list.length) return h + '<div class="empty">No people yet. Add suppliers, roasters, advisors and customers.</div>';
+    return h + '<div class="grid">' + list.map(function (p) {
+      var open = S.todos.filter(function (t) { return t.owner === p.id && isOpen(t); }).sort(function (a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
+      return '<article class="card"><div class="row"><div><h3>' + esc(p.name) + '</h3><div class="small muted">' + esc(p.company || '') + '</div></div>' + pill(cap(p.role), 'med') + '</div>' +
+        '<div class="contact">' + (p.email ? '<span>' + esc(p.email) + '</span>' : '') + (p.phone ? '<span class="mono">' + esc(p.phone) + '</span>' : '') + '</div>' +
+        (p.notes ? '<p class="small">' + esc(p.notes) + '</p>' : '') +
+        '<div class="meta"><span>Last contact: ' + (p.lastContact ? fmtDate(p.lastContact) + ' (' + ago(p.lastContact) + ')' : 'N/A') + '</span></div>' +
+        '<div class="todolist"><b class="small muted">Open ToDos (' + open.length + ')</b>' +
+        (open.length ? '<ul class="plain">' + open.map(function (t) { return '<li><span>' + esc(t.task) + '</span>' + (t.due ? '<span class="due' + (isOverdue(t) ? ' od' : '') + '">' + dueText(t) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<span class="muted">None</span>') + '</div>' +
+        '<div class="card-foot"><span></span>' + editBtn('people', p.id) + '</div></article>';
+    }).join('') + '</div>';
+  }
+
+  var eur2 = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format;
+  var laneSteps = function (l) { return S.process.filter(function (x) { return (x.lane || 'main') === l; }).sort(function (a, b) { return (a.order || 0) - (b.order || 0); }); };
+  var sumCost = function (a) { return a.reduce(function (n, x) { return n + (+x.cost || 0); }, 0); };
+  function stepBox(x, i, n, start) {
+    var cum = start + sumCost(laneSteps(x.lane || 'main').slice(0, i + 1));
+    var dl = function (k, v) { return v ? '<div><dt>' + k + '</dt><dd>' + esc(v) + '</dd></div>' : ''; };
+    return '<article class="step"><div class="row"><span class="num">Step ' + (i + 1) + '</span>' + pill(cap(x.stage || 'other'), 'active') + '</div>' +
+      '<h3>' + esc(x.name) + '</h3>' + (x.location ? '<div class="small muted">' + esc(x.location) + '</div>' : '') +
+      (x.description ? '<p class="small" style="margin:0">' + esc(x.description) + '</p>' : '') +
+      '<dl>' + dl('Input', x.input) + dl('Output', x.output) + dl('Objectives', x.objectives) + '</dl>' +
+      '<div class="cost">' + (x.cost == null || x.cost === '' ? '—' : eur2(+x.cost)) + ' / kg<small>Running total ' + eur2(cum) + ' / kg' + (x.costNote ? ' · ' + esc(x.costNote) : '') + '</small></div>' +
+      '<div class="card-foot"><span><button class="btn sm" data-act="movestep" data-id="' + esc(x.id) + '" data-dir="-1" aria-label="Move earlier" data-write' + (i === 0 ? ' disabled' : '') + '>◀</button> <button class="btn sm" data-act="movestep" data-id="' + esc(x.id) + '" data-dir="1" aria-label="Move later" data-write' + (i === n - 1 ? ' disabled' : '') + '>▶</button></span>' + editBtn('process', x.id) + '</div></article>';
+  }
+  function viewProcess() {
+    var mainCost = sumCost(laneSteps('main'));
+    var h = '<div class="bar-row"><span class="small muted">Costs are € added per kg of coffee at each step. Sample numbers are placeholders.</span><span class="grow"></span>' + addBtn('process', 'Add step') + '</div>';
+    h += '<div class="totals"><div class="stat"><span class="k">Main chain</span><span class="v">' + eur2(mainCost) + '</span><span class="s">per kg, farm to roasted</span></div>' +
+      LANES.slice(1).map(function (l) { var c = sumCost(laneSteps(l[0])); return '<div class="stat"><span class="k">' + (l[0] === 'cup' ? 'Total as cup' : 'Total as bag') + '</span><span class="v">' + eur2(mainCost + c) + '</span><span class="s">per kg, incl. branch ' + eur2(c) + '</span></div>'; }).join('') + '</div>';
+    LANES.forEach(function (l) {
+      var list = laneSteps(l[0]), start = l[0] === 'main' ? 0 : mainCost;
+      h += '<section class="lane"><h3>' + esc(l[1]) + '</h3><div class="small muted">' + esc(l[2]) + '</div>';
+      h += '<div class="flow">' + list.map(function (x, i) { return (i ? '<div class="arr" aria-hidden="true">→</div>' : '') + stepBox(x, i, list.length, start); }).join('') +
+        (list.length ? '<div class="arr" aria-hidden="true">→</div>' : '') + '<div class="step add"><button class="btn" data-act="add" data-col="process" data-lane="' + l[0] + '" data-write>+ Add step</button></div></div></section>';
+    });
+    return h;
+  }
+  function moveStep(id, dir) {
+    var x = S.process.find(function (p) { return p.id === id; }); if (!x || UI.ro) return;
+    var l = laneSteps(x.lane || 'main'), i = l.indexOf(x), j = i + dir;
+    if (j < 0 || j >= l.length) return;
+    l.splice(i, 1); l.splice(j, 0, x);
+    l.forEach(function (p, k) { if (p.order !== k + 1) save('process', Object.assign({}, p, { order: k + 1 })); });
+  }
+
+  function meter(label, v) {
+    var s = ''; for (var n = 1; n <= 5; n++) s += '<i' + (n <= v ? ' class="on"' : '') + '></i>';
+    return '<div class="meter">' + label + ' ' + (+v || 0) + '/5<div class="seg5">' + s + '</div></div>';
+  }
+  function viewIdeas() {
+    var h = '<div class="bar-row"><span class="grow muted small">Score each criterion 1 to 5, where 5 is best: cheap to start, strong demand, weak competition, strong fit with your skills. Maximum total is 20.</span>' + addBtn('ideas', 'Add idea') + '</div>';
+    var list = ranked();
+    if (!list.length) return h + '<div class="empty">No ideas yet.</div>';
+    return h + '<div class="grid">' + list.map(function (i, n) {
+      var ratio = +i.startup > 0 && +i.revenue > 0 ? (i.startup / i.revenue).toFixed(1) + '×' : '—';
+      return '<article class="card"><div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0"><span class="rank">#' + (n + 1) + '</span><div style="min-width:0"><h3>' + esc(i.name) + '</h3>' + pill(cap(i.model), 'med') + '</div></div>' +
+        '<div class="score">' + total(i) + '<small> / 20</small></div></div>' +
+        (i.description ? '<p class="small">' + esc(i.description) + '</p>' : '') +
+        (i.customer ? '<div class="small muted">For: ' + esc(i.customer) + '</div>' : '') +
+        '<div class="kv"><div><span>Startup</span><b>' + eur(i.startup) + '</b></div><div><span>Revenue / month</span><b>' + eur(i.revenue) + '</b></div><div><span>Startup ÷ monthly revenue</span><b>' + ratio + '</b></div></div>' +
+        '<div class="meters">' + meter('Cost', i.cost) + meter('Demand', i.demand) + meter('Competition', i.competition) + meter('My skills', i.skills) + '</div>' +
+        (i.risks ? '<div class="q"><b>Risks</b>' + esc(i.risks) + '</div>' : '') +
+        '<div class="card-foot">' + (i.goalId && goal(i.goalId) ? '<button class="btn sm" data-act="tab" data-tab="goals">Promoted to goal</button>' : '<button class="btn sm primary" data-act="promote" data-id="' + esc(i.id) + '" data-write>Promote to Goal</button>') + editBtn('ideas', i.id) + '</div></article>';
+    }).join('') + '</div>';
+  }
+
+  function viewResearch() {
+    var catOpts = '<option value="">All categories</option>' + CATS.map(function (c) { return '<option value="' + c + '"' + (UI.cat === c ? ' selected' : '') + '>' + cap(c) + '</option>'; }).join('');
+    return '<div class="bar-row"><input type="search" id="fQ" placeholder="Search topics, findings, questions" value="' + esc(UI.q) + '" aria-label="Search research"><select id="fCat" aria-label="Filter by category">' + catOpts + '</select>' + addBtn('research', 'Add research') + '</div><div id="rlist">' + researchList() + '</div>';
+  }
+  function researchList() {
+    var q = UI.q.trim().toLowerCase();
+    var list = S.research.filter(function (r) {
+      if (UI.cat && r.category !== UI.cat) return false;
+      return !q || [r.topic, r.findings, r.questions, r.category, r.url].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!list.length) return '<div class="empty">No research entries match.</div>';
+    return '<div class="grid">' + list.map(function (r) {
+      var safe = /^https?:\/\//i.test(r.url || '');
+      return '<article class="card"><div class="row"><h3>' + esc(r.topic) + '</h3>' + pill(cap(r.confidence || 'low') + ' confidence', r.confidence === 'high' ? 'high-conf' : r.confidence === 'medium' ? 'medium' : 'low') + '</div>' +
+        '<div class="meta"><span>' + cap(r.category) + '</span><span>' + (r.date ? 'Researched ' + fmtDate(r.date) : 'Not yet researched') + '</span></div>' +
+        (r.findings ? '<div class="findings">' + esc(r.findings) + '</div>' : '') +
+        (safe ? '<div class="small"><a href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">' + esc(r.url) + '</a></div>' : '') +
+        (r.questions ? '<div class="q"><b>Open questions</b>' + esc(r.questions) + '</div>' : '') +
+        '<div class="card-foot"><span></span>' + editBtn('research', r.id) + '</div></article>';
+    }).join('') + '</div>';
+  }
+
+  var VIEWS = { goals: viewGoals, todos: viewTodos, people: viewPeople, process: viewProcess, ideas: viewIdeas, research: viewResearch };
+  var TABNAMES = { goals: 'Goals', todos: 'ToDos', people: 'People', process: 'Process Map', ideas: 'Business Ideas', research: 'Research' };
+
+  function render() {
+    var st = $('#store');
+    var msgs = {
+      loading: ['Loading your workspace…', false],
+      db: ['Edits are saved automatically and persist between visits.', false],
+      local: ['Shared storage is not available in this view, so edits are saved in this browser only. Use Export JSON for a backup.', true],
+      memory: ['No storage is available here. Your edits will be lost when you close this page. Use Export JSON before leaving.', true]
+    };
+    var m = msgs[UI.mode] || msgs.loading;
+    st.className = 'store' + (m[1] ? ' warn' : ''); st.querySelector('span').textContent = m[0];
+    document.body.classList.toggle('ro', !!UI.ro);
+    $('#clearBtn').disabled = !COLS.some(function (c) { return S[c].some(function (x) { return x.sample; }); });
+    if (!UI.ready) { $('#overview').innerHTML = ''; $('#tabs').innerHTML = ''; $('#view').innerHTML = '<div class="empty">Loading…</div>'; return; }
+    $('#overview').innerHTML = overview();
+    $('#tabs').innerHTML = COLS.map(function (c) {
+      var n = c === 'todos' ? S.todos.filter(isOpen).length : S[c].length;
+      return '<button class="tab" role="tab" data-act="tab" data-tab="' + c + '" aria-selected="' + (UI.tab === c) + '">' + TABNAMES[c] + '<span class="n">' + n + '</span></button>';
+    }).join('');
+    $('#view').innerHTML = VIEWS[UI.tab]();
+  }
+
+  /* ---------- modal ---------- */
+  function closeModal() { $('#modalRoot').innerHTML = ''; }
+  function openModal(inner, onMount) {
+    $('#modalRoot').innerHTML = '<div class="back" id="back"><div class="modal" role="dialog" aria-modal="true">' + inner + '</div></div>';
+    $('#back').addEventListener('mousedown', function (e) { if (e.target.id === 'back') closeModal(); });
+    if (onMount) onMount();
+  }
+  function fieldHTML(f, val) {
+    var id = 'f_' + f.k, lab = '<label for="' + id + '">' + esc(f.l) + (f.req ? ' *' : '') + '</label>', inp;
+    if (f.t === 'textarea') inp = '<textarea id="' + id + '" name="' + f.k + '" rows="3">' + esc(val) + '</textarea>';
+    else if (f.t === 'select') {
+      var o = typeof f.o === 'function' ? f.o() : f.o;
+      inp = '<select id="' + id + '" name="' + f.k + '">' + o.map(function (p) { return '<option value="' + esc(p[0]) + '"' + (String(p[0]) === String(val == null ? '' : val) ? ' selected' : '') + '>' + esc(p[1]) + '</option>'; }).join('') + '</select>';
+    } else if (f.t === 'range') {
+      inp = '<input type="range" id="' + id + '" name="' + f.k + '" min="0" max="100" step="5" value="' + (+val || 0) + '" data-out="out_' + f.k + '"><output id="out_' + f.k + '" for="' + id + '">' + (+val || 0) + '%</output>';
+    } else inp = '<input type="' + f.t + '" id="' + id + '" name="' + f.k + '" value="' + esc(val) + '"' + (f.req ? ' required' : '') + (f.min != null ? ' min="' + f.min + '"' : '') + (f.t === 'number' ? ' step="any" inputmode="decimal"' : '') + '>';
+    return '<div class="field' + (f.full ? ' full' : '') + '">' + lab + inp + '</div>';
+  }
+  function openForm(col, id, preset) {
+    if (UI.ro) return;
+    var sc = SCHEMA[col], cur = id ? S[col].find(function (x) { return x.id === id; }) : null, v = cur || Object.assign(sc.def(), preset || {});
+    openModal('<h2>' + (cur ? 'Edit ' : 'New ') + sc.label.toLowerCase() + '</h2><form id="mform" novalidate><div class="fields">' +
+      sc.fields.map(function (f) { return fieldHTML(f, v[f.k]); }).join('') + '</div>' +
+      '<div class="foot" style="margin-top:14px"><div>' + (cur ? '<button type="button" class="btn danger" id="delBtn">Delete</button>' : '') + '</div><div><button type="button" class="btn" id="cancelBtn">Cancel</button><button type="submit" class="btn primary">Save</button></div></div></form>', function () {
+      var form = $('#mform');
+      $('#cancelBtn').addEventListener('click', closeModal);
+      var del = $('#delBtn');
+      if (del) del.addEventListener('click', function () {
+        if (!del.classList.contains('armed')) { del.classList.add('armed'); del.textContent = 'Confirm delete'; return; }
+        closeModal(); remove(col, cur.id);
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!form.reportValidity()) return;
+        var out = Object.assign({}, cur || {}, { id: cur ? cur.id : uid(), sample: false });
+        sc.fields.forEach(function (f) {
+          var raw = form.elements[f.k].value;
+          if (f.t === 'number') out[f.k] = raw === '' ? null : Number(raw);
+          else if (f.t === 'range' || f.n) out[f.k] = Number(raw);
+          else out[f.k] = raw.trim();
+        });
+        if (col === 'process' && !cur) out.order = laneSteps(out.lane).length + 1;
+        closeModal(); save(col, out);
+      });
+      var first = form.querySelector('input,select,textarea'); if (first) first.focus();
+    });
+  }
+  function confirmBox(msg, yes, yesLabel) {
+    openModal('<h2>' + esc(msg) + '</h2><div class="foot"><span></span><div><button class="btn" id="cNo">Cancel</button><button class="btn danger armed" id="cYes">' + esc(yesLabel) + '</button></div></div>', function () {
+      $('#cNo').addEventListener('click', closeModal);
+      $('#cYes').addEventListener('click', function () { closeModal(); yes(); });
+    });
+  }
+
+  /* ---------- export / import ---------- */
+  function exportJSON() {
+    var data = { app: 'coffee-business-workspace', version: 1, exportedAt: new Date().toISOString() };
+    COLS.forEach(function (c) { data[c] = S[c]; });
+    var json = JSON.stringify(data, null, 2);
+    if (downloads) {
+      downloads.save({ filename: 'coffee-workspace-' + today + '.json', data: json }).then(function () { toast('Backup saved'); }).catch(function (e) {
+        if (e && e.code === 'declined') return;
+        showJSON(json);
+      });
+    } else if (location.protocol === 'file:' || location.protocol.indexOf('http') === 0) {
+      // local run: plain browser download
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      a.download = 'coffee-workspace-' + today + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+    } else showJSON(json);
+  }
+  function showJSON(json) {
+    openModal('<h2>Copy your backup</h2><p class="small muted" style="margin:0">Downloads are not available in this view. Copy this text into a .json file.</p><textarea class="json" id="jsonOut" readonly></textarea><div class="foot"><span></span><div><button class="btn" id="jCopy">Copy</button><button class="btn primary" id="jClose">Close</button></div></div>', function () {
+      var ta = $('#jsonOut'); ta.value = json; ta.select();
+      $('#jClose').addEventListener('click', closeModal);
+      $('#jCopy').addEventListener('click', function () {
+        (navigator.clipboard ? navigator.clipboard.writeText(json) : Promise.reject()).then(function () { toast('Copied'); }).catch(function () { ta.select(); toast('Press Ctrl/Cmd+C to copy', true); });
+      });
+    });
+  }
+  function importJSON(text) {
+    var j;
+    try { j = JSON.parse(text); } catch (e) { toast('That file is not valid JSON.', true); return; }
+    var data = {};
+    for (var c = 0; c < COLS.length; c++) {
+      var arr = j && j[COLS[c]];
+      if (!Array.isArray(arr) && COLS[c] === 'process') arr = [];
+      if (!Array.isArray(arr)) { toast('Missing "' + COLS[c] + '" list. Use a file exported from this workspace.', true); return; }
+      data[COLS[c]] = arr.filter(function (x) { return x && typeof x === 'object'; }).map(function (x) { var o = Object.assign({}, x); o.id = /^[A-Za-z0-9_.~:@+-]{1,100}$/.test(o.id || '') ? o.id : uid(); return o; });
+    }
+    confirmBox('Replace all current data with this file (' + COLS.map(function (c) { return data[c].length + ' ' + c; }).join(', ') + ')?', function () {
+      toast('Importing…');
+      replaceAll(data).then(function () { toast('Import complete'); });
+    }, 'Replace everything');
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    var a = el.dataset.act, id = el.dataset.id;
+    if (a === 'tab') { UI.tab = el.dataset.tab; try { location.hash = UI.tab; } catch (x) {} render(); window.scrollTo({ top: 0 }); }
+    else if (a === 'add') openForm(el.dataset.col, null, el.dataset.lane ? { lane: el.dataset.lane } : null);
+    else if (a === 'movestep') moveStep(id, Number(el.dataset.dir));
+    else if (a === 'edit') openForm(el.dataset.col, id);
+    else if (a === 'tview') { UI.todoView = el.dataset.v; render(); }
+    else if (a === 'toggledone' || a === 'move') {
+      var t = S.todos.find(function (x) { return x.id === id; }); if (!t || UI.ro) return;
+      var next = a === 'toggledone' ? (t.status === 'done' ? 'todo' : 'done') : TODO_STATUS[TODO_STATUS.indexOf(t.status) + Number(el.dataset.dir)];
+      if (next) save('todos', Object.assign({}, t, { status: next, sample: false }));
+    }
+    else if (a === 'promote') promote(id);
+    else if (a === 'export') exportJSON();
+    else if (a === 'import') $('#impfile').click();
+    else if (a === 'clearsample') confirmBox('Delete all sample entries you have not edited?', clearSample, 'Clear sample data');
+  });
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.id === 'fOwner') { UI.fOwner = t.value; render(); }
+    else if (t.id === 'fPrio') { UI.fPrio = t.value; render(); }
+    else if (t.id === 'fRole') { UI.fRole = t.value; render(); }
+    else if (t.id === 'fCat') { UI.cat = t.value; $('#rlist').innerHTML = researchList(); }
+    else if (t.dataset && t.dataset.act === 'prog') {
+      var g = goal(t.dataset.id); if (g) save('goals', Object.assign({}, g, { progress: Number(t.value), sample: false }));
+    } else if (t.id === 'impfile') {
+      var f = t.files && t.files[0]; if (!f) return;
+      var r = new FileReader(); r.onload = function () { importJSON(String(r.result)); t.value = ''; }; r.readAsText(f);
+    }
+  });
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.id === 'fQ') { UI.q = t.value; $('#rlist').innerHTML = researchList(); }
+    else if (t.dataset && t.dataset.act === 'prog') { var o = document.getElementById('pv-' + t.dataset.id); if (o) o.textContent = t.value + '%'; }
+    else if (t.dataset && t.dataset.out) { document.getElementById(t.dataset.out).textContent = t.value + '%'; }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  async function promote(id) {
+    var i = S.ideas.find(function (x) { return x.id === id; });
+    if (!i || i.goalId || UI.ro) return;
+    var gid = uid();
+    await save('goals', { id: gid, title: 'Launch: ' + i.name, description: i.description || '', type: 'mid-term', target: plus(180), metric: i.revenue ? eur(i.revenue) + ' monthly revenue' : '', progress: 0, status: 'not started', fromIdea: i.id, sample: false });
+    await save('ideas', Object.assign({}, i, { goalId: gid, sample: false }));
+    toast('Added to Goals as a mid-term goal');
+  }
+
+  /* ---------- start ---------- */
+  async function init() {
+    var h = (location.hash || '').replace('#', '');
+    if (COLS.indexOf(h) >= 0) UI.tab = h;
+    render();
+    var withTimeout = function (p, ms) { return Promise.race([p, wait(ms).then(function () { return null; })]); };
+    try { if (window.claude && window.claude.use) downloads = await withTimeout(window.claude.use('downloads'), 4000); } catch (e) {}
+    try { if (window.claude && window.claude.use) db = await withTimeout(window.claude.use('db'), 8000); } catch (e) { db = null; }
+    if (!db) { loadLocal(); UI.ready = true; render(); return; }
+    try {
+      var u = await withTimeout(window.claude.use('user'), 3000);
+      if (u && u.can) { var c = await u.can('data.write'); if (c === false) UI.ro = true; }
+    } catch (e) {}
+    UI.mode = 'db';
+    var loaded = {}, metaExists = null, metaData = {}, seedingP = false;
+    var check = function () {
+      if (Object.keys(loaded).length < COLS.length || metaExists === null) return;
+      if (metaExists === false && !UI.ro && !seeding) {
+        seeding = true;
+        seedDb().catch(function (e) { toast('Could not load sample data: ' + ((e && e.message) || 'storage error'), true); UI.ready = true; render(); });
+        return;
+      }
+      if (metaExists && !UI.ro && !seedingP && !metaData.processSeeded) { seedingP = true; seedProcess().catch(onErr); }
+      if (metaExists || UI.ro) { UI.ready = true; render(); }
+    };
+    var onErr = function (e) { toast('Storage error: ' + ((e && e.message) || 'unavailable'), true); };
+    COLS.forEach(function (c) {
+      db.collection(c).onSnapshot(function (snap) {
+        S[c] = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+        loaded[c] = true;
+        if (UI.ready) render(); else check();
+      }, onErr);
+    });
+    db.doc('meta/app').onSnapshot(function (snap) { metaExists = snap.exists; metaData = (snap.exists && snap.data()) || {}; check(); }, onErr);
+  }
+  init();
+})();
+</script>

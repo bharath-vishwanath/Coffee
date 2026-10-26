@@ -1,7 +1,13 @@
+# macOS
 .DS_Store
+
+# Secrets
 .env
 .env.*
-node_modules/
+
+# Logs
 *.log
+
+# Editors
 .idea/
 .vscode/
